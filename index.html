@@ -494,9 +494,19 @@ function questionSuivante(){
   afficherQuestion();
 }
 
-function finDuJeu(){
+async function finDuJeu(){
   document.getElementById("ecran-jeu").style.display = "none";
   document.getElementById("ecran-fin").style.display = "block";
+
+  const dansTrenteMin = new Date(Date.now() + 30*60*1000).toISOString();
+  try{
+    const { error } = await supabaseClient
+      .from("etat_deverrouillage")
+      .upsert({ id: 1, deverrouille_jusqu_a: dansTrenteMin });
+    if(error) console.error("Erreur enregistrement déverrouillage :", error);
+  } catch(e){
+    console.error("Erreur réseau déverrouillage :", e);
+  }
 }
 
 function recommencer(){
