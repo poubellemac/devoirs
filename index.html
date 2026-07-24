@@ -188,8 +188,8 @@
       <div class="temps-badge" id="badge-temps">Présent</div>
       <div class="phrase" id="phrase-texte"></div>
 
-      <div class="qcm-groupe">
-        <div class="qcm-label">Masculin, féminin, singulier ou pluriel ?</div>
+      <div class="qcm-groupe" style="opacity:0.4; pointer-events:none;">
+        <div class="qcm-label">Masculin, féminin, singulier ou pluriel ? (désactivé pour le moment)</div>
         <div class="qcm-options" id="qcm-genre-nombre">
           <div class="qcm-btn-small" data-type="genre" data-val="m">Masculin</div>
           <div class="qcm-btn-small" data-type="genre" data-val="f">Féminin</div>
@@ -200,10 +200,11 @@
 
       <input type="text" id="reponse-input" placeholder="Écris le verbe ici..." autocomplete="off">
 
-      <div class="boutons">
+      <div class="boutons" id="zone-boutons">
         <button class="action btn-aide" onclick="toggleAide()">💡 Aide</button>
-        <button class="action btn-valider" onclick="valider()">Valider</button>
+        <button class="action btn-valider" id="btn-valider" onclick="valider()">Valider</button>
       </div>
+      <button class="action btn-valider" id="btn-suivant" onclick="questionSuivante()" style="display:none; width:100%; margin-top:10px;">Suivant ➡️</button>
 
       <div class="indice" id="zone-indice"></div>
       <div class="feedback" id="zone-feedback"></div>
@@ -289,18 +290,29 @@ let genreChoisi = null;
 let nombreChoisi = null;
 const NB_QUESTIONS = 10;
 
-function creerQuestion(){
-  const verbe = verbes[Math.floor(Math.random()*verbes.length)];
+function melanger(tableau){
+  const t = tableau.slice();
+  for(let i = t.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [t[i], t[j]] = [t[j], t[i]];
+  }
+  return t;
+}
+
+function creerQuestionAvecVerbe(verbe){
   const tempsChoisi = temps[Math.floor(Math.random()*temps.length)];
   const sujet = sujets[Math.floor(Math.random()*sujets.length)];
   return { verbe, tempsChoisi, sujet };
 }
 
 function genererFile(){
-  file = [];
-  for(let i=0; i<NB_QUESTIONS; i++){
-    file.push(creerQuestion());
+  // sac de verbes mélangé pour une rotation équilibrée, pas de hasard pur
+  let sac = [];
+  while(sac.length < NB_QUESTIONS){
+    sac = sac.concat(melanger(verbes));
   }
+  sac = melanger(sac).slice(0, NB_QUESTIONS);
+  file = sac.map(v => creerQuestionAvecVerbe(v));
 }
 
 function formePassecompose(verbe, indexConj, genreAccord, pluriel){
@@ -340,6 +352,9 @@ function afficherQuestion(){
   document.getElementById("zone-feedback").className = "feedback";
   document.getElementById("zone-feedback").textContent = "";
   document.getElementById("zone-indice").className = "indice";
+  document.getElementById("btn-valider").style.display = "inline-block";
+  document.getElementById("btn-suivant").style.display = "none";
+  document.getElementById("reponse-input").disabled = false;
   genreChoisi = null;
   nombreChoisi = null;
   document.querySelectorAll("#qcm-genre-nombre .qcm-btn-small").forEach(b=>b.classList.remove("selected"));
@@ -385,20 +400,15 @@ async function enregistrerErreur(q, reponseDonnee, reponseAttendue){
   }
 }
 
+let derniereQuestionReussie = false;
+
 function valider(){
   const q = file[0];
   const feedback = document.getElementById("zone-feedback");
 
-  if(!nombreChoisi || !genreChoisi){
-    feedback.className = "feedback non";
-    feedback.textContent = "⚠️ Choisis d'abord le genre et le nombre.";
-    return;
-  }
-
-  const genreAccord = q.sujet.genre === "amb" ? genreChoisi : q.sujet.genre;
-  const nombreOk = nombreChoisi === q.sujet.nombre;
-  const genreOk = q.sujet.genre === "amb" ? true : (genreChoisi === q.sujet.genre);
-  const qcmOk = nombreOk && genreOk;
+  // QCM genre/nombre désactivé temporairement (toujours considéré correct)
+  const qcmOk = true;
+  const genreAccord = q.sujet.genre === "amb" ? "m" : q.sujet.genre;
 
   const reponse = document.getElementById("reponse-input").value.trim().toLowerCase();
   const attendu = formeAttendue(q.verbe, q.tempsChoisi.cle, q.sujet, genreAccord).toLowerCase();
@@ -421,13 +431,18 @@ function valider(){
     enregistrerErreur(q, reponse, attendu);
   }
 
-  setTimeout(()=>{
-    file.shift();
-    if(!reussi){
-      file.push(q);
-    }
-    afficherQuestion();
-  }, 1900);
+  derniereQuestionReussie = reussi;
+  document.getElementById("reponse-input").disabled = true;
+  document.getElementById("btn-valider").style.display = "none";
+  document.getElementById("btn-suivant").style.display = "block";
+}
+
+function questionSuivante(){
+  const q = file.shift();
+  if(!derniereQuestionReussie){
+    file.push(q);
+  }
+  afficherQuestion();
 }
 
 function finDuJeu(){
