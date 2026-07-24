@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Conjugaison - Kelvin</title>
+<style>
+  :root{
+    --bleu: #2b6cb0;
+    --bleu-fonce: #1a365d;
+    --jaune: #f6c343;
+    --vert: #2f9e44;
+    --rouge: #e03131;
+    --fond: #eef4fb;
+    --carte: #ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: 'Comic Sans MS', 'Trebuchet MS', sans-serif;
+    background: var(--fond);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+  .app{
+    width:100%;
+    max-width:480px;
+    padding:16px;
+    padding-bottom:60px;
+  }
+  header{
+    text-align:center;
+    padding:18px 10px;
+    background: var(--bleu-fonce);
+    color:white;
+    border-radius:18px;
+    margin-bottom:16px;
+  }
+  header h1{
+    margin:0;
+    font-size:1.5rem;
+  }
+  header p{
+    margin:4px 0 0;
+    font-size:0.9rem;
+    opacity:0.85;
+  }
+  .carte{
+    background: var(--carte);
+    border-radius:18px;
+    padding:20px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    margin-bottom:16px;
+  }
+  .temps-badge{
+    display:inline-block;
+    background: var(--jaune);
+    color:#5c4400;
+    font-weight:bold;
+    padding:4px 12px;
+    border-radius:20px;
+    font-size:0.85rem;
+    margin-bottom:12px;
+  }
+  .phrase{
+    font-size:1.25rem;
+    line-height:1.6;
+    margin-bottom:18px;
+  }
+  .verbe-infinitif{
+    color: var(--bleu);
+    font-weight:bold;
+  }
+  .qcm-groupe{
+    margin-bottom:16px;
+  }
+  .qcm-label{
+    font-size:0.9rem;
+    color:#555;
+    margin-bottom:6px;
+    font-weight:bold;
+  }
+  .qcm-options{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .qcm-btn{
+    flex:1;
+    min-width:80px;
+    padding:10px 6px;
+    border:2px solid #ccc;
+    border-radius:12px;
+    background:white;
+    font-size:0.95rem;
+    cursor:pointer;
+    text-align:center;
+  }
+  .qcm-btn.selected{
+    border-color: var(--bleu);
+    background:#e7f0fb;
+    color: var(--bleu-fonce);
+    font-weight:bold;
+  }
+  .qcm-btn-small{
+    flex:1;
+    min-width:60px;
+    padding:7px 4px;
+    border:2px solid #ccc;
+    border-radius:9px;
+    background:white;
+    font-size:0.72rem;
+    cursor:pointer;
+    text-align:center;
+  }
+  .qcm-btn-small.selected{
+    border-color: var(--bleu);
+    background:#e7f0fb;
+    color: var(--bleu-fonce);
+    font-weight:bold;
+  }
+  input[type="text"]{
+    width:100%;
+    padding:12px;
+    font-size:1.1rem;
+    border:2px solid #ccc;
+    border-radius:12px;
+    margin-bottom:12px;
+    font-family:inherit;
+  }
+  .boutons{
+    display:flex;
+    gap:10px;
+  }
+  button.action{
+    flex:1;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-size:1rem;
+    font-weight:bold;
+    cursor:pointer;
+    color:white;
+  }
+  .btn-valider{background: var(--bleu);}
+  .btn-aide{background:#868e96;}
+  .feedback{
+    margin-top:14px;
+    padding:12px;
+    border-radius:12px;
+    font-size:1rem;
+    display:none;
+  }
+  .feedback.ok{background:#d3f9d8; color:#2b8a3e; display:block;}
+  .feedback.non{background:#ffe3e3; color:#c92a2a; display:block;}
+  .feedback.accent{background:#fff3bf; color:#8a6d00; display:block;}
+  .indice{
+    margin-top:10px;
+    padding:10px;
+    background:#f1f3f5;
+    border-left:4px solid var(--jaune);
+    border-radius:8px;
+    font-size:0.95rem;
+    display:none;
+  }
+  .indice.visible{display:block;}
+  .score-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.95rem;
+    color:#444;
+    margin-bottom:10px;
+  }
+  .score-bar strong{color: var(--bleu-fonce);}
+  #ecran-fin{
+    display:none;
+    text-align:center;
+  }
+  #ecran-fin h2{color:var(--bleu-fonce);}
+  .rejouer{
+    background: var(--vert);
+    color:white;
+    border:none;
+    padding:14px 20px;
+    border-radius:14px;
+    font-size:1rem;
+    font-weight:bold;
+    cursor:pointer;
+    margin-top:10px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>✏️ Conjugaison</h1>
+    <p>Entraîne-toi avec Claude !</p>
+  </header>
+
+  <div id="ecran-jeu">
+    <div class="score-bar">
+      <span>Question <strong id="num-question">1</strong>/<span id="total-questions">10</span></span>
+      <span>Score : <strong id="score-actuel">0</strong></span>
+    </div>
+
+    <div class="carte">
+      <div class="temps-badge" id="badge-temps">Présent</div>
+      <div class="phrase" id="phrase-texte"></div>
+
+      <div class="qcm-groupe">
+        <div class="qcm-label">Quelle personne ?</div>
+        <div class="qcm-options" id="qcm-personne">
+          <div class="qcm-btn" data-val="1">1ère</div>
+          <div class="qcm-btn" data-val="2">2ème</div>
+          <div class="qcm-btn" data-val="3">3ème</div>
+        </div>
+      </div>
+
+      <div class="qcm-groupe">
+        <div class="qcm-label">Masculin, féminin, singulier ou pluriel ?</div>
+        <div class="qcm-options" id="qcm-genre-nombre">
+          <div class="qcm-btn-small" data-type="genre" data-val="m">Masculin</div>
+          <div class="qcm-btn-small" data-type="genre" data-val="f">Féminin</div>
+          <div class="qcm-btn-small" data-type="nombre" data-val="s">Singulier</div>
+          <div class="qcm-btn-small" data-type="nombre" data-val="p">Pluriel</div>
+        </div>
+      </div>
+
+      <input type="text" id="reponse-input" placeholder="Écris le verbe ici..." autocomplete="off">
+
+      <div class="boutons">
+        <button class="action btn-aide" onclick="toggleAide()">💡 Aide</button>
+        <button class="action btn-valider" onclick="valider()">Valider</button>
+      </div>
+
+      <div class="indice" id="zone-indice"></div>
+      <div class="feedback" id="zone-feedback"></div>
+    </div>
+  </div>
+
+  <div id="ecran-fin">
+    <div class="carte">
+      <h2>🎉 Terminé !</h2>
+      <p id="score-final"></p>
+      <button class="rejouer" onclick="recommencer()">Recommencer</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   DONNEES - Premier jet : 2 verbes par groupe, 4 temps
+   Chaque conjugaison = [je/j', tu, il/elle, nous, vous, ils/elles]
+   ============================================================ */
+const verbes = [
+  // GROUPE 1
+  {
+    infinitif: "manger",
+    groupe: 1,
+    complement: "une pomme",
+    present:   ["mange", "manges", "mange", "mangeons", "mangez", "mangent"],
+    futur:     ["mangerai", "mangeras", "mangera", "mangerons", "mangerez", "mangeront"],
+    imparfait: ["mangeais", "mangeais", "mangeait", "mangions", "mangiez", "mangeaient"],
+    passeCompose: { aux:"avoir", participe:"mangé" }
+  },
+  {
+    infinitif: "regarder",
+    groupe: 1,
+    complement: "la télé",
+    present:   ["regarde", "regardes", "regarde", "regardons", "regardez", "regardent"],
+    futur:     ["regarderai", "regarderas", "regardera", "regarderons", "regarderez", "regarderont"],
+    imparfait: ["regardais", "regardais", "regardait", "regardions", "regardiez", "regardaient"],
+    passeCompose: { aux:"avoir", participe:"regardé" }
+  },
+  // GROUPE 2
+  {
+    infinitif: "finir",
+    groupe: 2,
+    complement: "ses devoirs",
+    present:   ["finis", "finis", "finit", "finissons", "finissez", "finissent"],
+    futur:     ["finirai", "finiras", "finira", "finirons", "finirez", "finiront"],
+    imparfait: ["finissais", "finissais", "finissait", "finissions", "finissiez", "finissaient"],
+    passeCompose: { aux:"avoir", participe:"fini" }
+  },
+  {
+    infinitif: "grandir",
+    groupe: 2,
+    complement: "vite",
+    present:   ["grandis", "grandis", "grandit", "grandissons", "grandissez", "grandissent"],
+    futur:     ["grandirai", "grandiras", "grandira", "grandirons", "grandirez", "grandiront"],
+    imparfait: ["grandissais", "grandissais", "grandissait", "grandissions", "grandissiez", "grandissaient"],
+    passeCompose: { aux:"avoir", participe:"grandi" }
+  },
+  // GROUPE 3
+  {
+    infinitif: "faire",
+    groupe: 3,
+    complement: "un gâteau",
+    present:   ["fais", "fais", "fait", "faisons", "faites", "font"],
+    futur:     ["ferai", "feras", "fera", "ferons", "ferez", "feront"],
+    imparfait: ["faisais", "faisais", "faisait", "faisions", "faisiez", "faisaient"],
+    passeCompose: { aux:"avoir", participe:"fait" }
+  },
+  {
+    infinitif: "venir",
+    groupe: 3,
+    complement: "à la fête",
+    present:   ["viens", "viens", "vient", "venons", "venez", "viennent"],
+    futur:     ["viendrai", "viendras", "viendra", "viendrons", "viendrez", "viendront"],
+    imparfait: ["venais", "venais", "venait", "venions", "veniez", "venaient"],
+    passeCompose: { aux:"etre", participe:"venu" }
+  }
+];
+
+const pronoms = ["je", "tu", "il", "nous", "vous", "ils"];
+// je=1s, tu=2s, il=3s, nous=1p, vous=2p, ils=3p
+const infoPersonne = [
+  {personne:1, nombre:"s"},
+  {personne:2, nombre:"s"},
+  {personne:3, nombre:"s"},
+  {personne:1, nombre:"p"},
+  {personne:2, nombre:"p"},
+  {personne:3, nombre:"p"}
+];
+
+const temps = [
+  { cle:"present", nom:"Présent", indiceMot:"Maintenant" },
+  { cle:"futur", nom:"Futur", indiceMot:"Demain" },
+  { cle:"imparfait", nom:"Imparfait", indiceMot:"Autrefois" },
+  { cle:"passeCompose", nom:"Passé composé", indiceMot:"Hier" }
+];
+
+/* ============================================================
+   MOTEUR DU JEU
+   ============================================================ */
+let questions = [];
+let indexQuestion = 0;
+let score = 0;
+let personneChoisie = null;
+let nombreChoisi = null;
+let genreChoisi = null;
+const NB_QUESTIONS = 10;
+
+function genererQuestions(){
+  questions = [];
+  for(let i=0; i<NB_QUESTIONS; i++){
+    const verbe = verbes[Math.floor(Math.random()*verbes.length)];
+    const tempsChoisi = temps[Math.floor(Math.random()*temps.length)];
+    const indexPersonne = Math.floor(Math.random()*6);
+    const genre = Math.random() < 0.5 ? "m" : "f";
+    questions.push({ verbe, tempsChoisi, indexPersonne, genre });
+  }
+}
+
+function formePassecompose(verbe, indexPersonne, genre){
+  const aux = verbe.passeCompose.aux;
+  const auxForme = aux === "avoir"
+    ? ["ai","as","a","avons","avez","ont"][indexPersonne]
+    : ["suis","es","est","sommes","êtes","sont"][indexPersonne];
+  let participe = verbe.passeCompose.participe;
+  const estPluriel = (indexPersonne===3 || indexPersonne===4 || indexPersonne===5);
+  // accord uniquement avec l'auxiliaire être (1er jet, pas d'accord avec avoir)
+  if(aux === "etre"){
+    if(genre === "f" && estPluriel) participe += "es";
+    else if(genre === "f") participe += "e";
+    else if(estPluriel) participe += "s";
+  }
+  return auxForme + " " + participe;
+}
+
+function formeAttendue(verbe, tempsCle, indexPersonne, genre){
+  if(tempsCle === "passeCompose"){
+    return formePassecompose(verbe, indexPersonne, genre);
+  }
+  return verbe[tempsCle][indexPersonne];
+}
+
+function phraseAvecTrou(verbe, tempsCle){
+  const sujet = "___";
+  let complement = verbe.complement;
+  if(tempsCle === "passeCompose"){
+    return sujet + " ___ ___ " + complement + ".";
+  }
+  return sujet + " ___ " + complement + ".";
+}
+
+function afficherQuestion(){
+  if(indexQuestion >= questions.length){
+    finDuJeu();
+    return;
+  }
+  const q = questions[indexQuestion];
+  document.getElementById("num-question").textContent = indexQuestion+1;
+  document.getElementById("total-questions").textContent = questions.length;
+  document.getElementById("score-actuel").textContent = score;
+  document.getElementById("badge-temps").textContent = q.tempsChoisi.nom;
+
+  let pronomAffiche = pronoms[q.indexPersonne];
+  if(q.indexPersonne===2 && q.genre==="f") pronomAffiche = "elle";
+  if(q.indexPersonne===5 && q.genre==="f") pronomAffiche = "elles";
+  document.getElementById("phrase-texte").innerHTML =
+    "<b>" + pronomAffiche + "</b> ______ " +
+    "<span class='verbe-infinitif'>(" + q.verbe.infinitif + ")</span> " +
+    q.verbe.complement + ".";
+
+  // reset UI
+  document.getElementById("reponse-input").value = "";
+  document.getElementById("zone-feedback").className = "feedback";
+  document.getElementById("zone-feedback").textContent = "";
+  document.getElementById("zone-indice").className = "indice";
+  personneChoisie = null;
+  nombreChoisi = null;
+  genreChoisi = null;
+  document.querySelectorAll("#qcm-personne .qcm-btn").forEach(b=>b.classList.remove("selected"));
+  document.querySelectorAll("#qcm-genre-nombre .qcm-btn-small").forEach(b=>b.classList.remove("selected"));
+
+  // indice
+  const infoP = infoPersonne[q.indexPersonne];
+  let exemplePronom = pronoms[infoP.nombre==="s" ? infoP.personne-1 : 3+infoP.personne-1];
+  if(infoP.personne===3 && infoP.nombre==="s" && q.genre==="f") exemplePronom = "elle";
+  if(infoP.personne===3 && infoP.nombre==="p" && q.genre==="f") exemplePronom = "elles";
+  const exempleForme = formeAttendue(q.verbe, q.tempsChoisi.cle, infoP.nombre==="s" ? infoP.personne-1 : 3+infoP.personne-1, q.genre);
+  document.getElementById("zone-indice").innerHTML =
+    "💡 Exemple : <i>" + q.tempsChoisi.indiceMot + ", " + exemplePronom + " " + exempleForme + " " + q.verbe.complement + ".</i>";
+}
+
+function toggleAide(){
+  document.getElementById("zone-indice").classList.toggle("visible");
+}
+
+document.getElementById("qcm-personne").addEventListener("click", function(e){
+  if(!e.target.classList.contains("qcm-btn")) return;
+  document.querySelectorAll("#qcm-personne .qcm-btn").forEach(b=>b.classList.remove("selected"));
+  e.target.classList.add("selected");
+  personneChoisie = e.target.dataset.val;
+});
+
+document.getElementById("qcm-genre-nombre").addEventListener("click", function(e){
+  if(!e.target.classList.contains("qcm-btn-small")) return;
+  const type = e.target.dataset.type; // "genre" ou "nombre"
+  document.querySelectorAll("#qcm-genre-nombre .qcm-btn-small[data-type='"+type+"']").forEach(b=>b.classList.remove("selected"));
+  e.target.classList.add("selected");
+  if(type === "genre") genreChoisi = e.target.dataset.val;
+  if(type === "nombre") nombreChoisi = e.target.dataset.val;
+});
+
+function retirerAccents(str){
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function valider(){
+  const q = questions[indexQuestion];
+  const infoP = infoPersonne[q.indexPersonne];
+  const reponse = document.getElementById("reponse-input").value.trim().toLowerCase();
+  const attendu = formeAttendue(q.verbe, q.tempsChoisi.cle, q.indexPersonne, q.genre).toLowerCase();
+
+  const qcmOk = (personneChoisie == infoP.personne) && (nombreChoisi === infoP.nombre) && (genreChoisi === q.genre);
+  const feedback = document.getElementById("zone-feedback");
+
+  if(!personneChoisie || !nombreChoisi || !genreChoisi){
+    feedback.className = "feedback non";
+    feedback.textContent = "⚠️ Choisis d'abord la personne, le genre et le nombre.";
+    return;
+  }
+
+  const reponseSansAccent = retirerAccents(reponse);
+  const attenduSansAccent = retirerAccents(attendu);
+
+  if(reponse === attendu && qcmOk){
+    score++;
+    feedback.className = "feedback ok";
+    feedback.textContent = "✅ Bravo, c'est juste !";
+  } else if(reponseSansAccent === attenduSansAccent && qcmOk){
+    feedback.className = "feedback accent";
+    feedback.textContent = "🟡 Presque ! Il manque des accents. La bonne réponse : " + attendu;
+  } else {
+    feedback.className = "feedback non";
+    let messages = [];
+    if(!qcmOk) messages.push("la personne, le genre ou le nombre n'est pas correct");
+    if(reponseSansAccent !== attenduSansAccent) messages.push("le verbe n'est pas correct");
+    feedback.textContent = "❌ Pas encore ! Réponse attendue : " + attendu;
+  }
+
+  setTimeout(()=>{
+    indexQuestion++;
+    afficherQuestion();
+  }, 1800);
+}
+
+function finDuJeu(){
+  document.getElementById("ecran-jeu").style.display = "none";
+  document.getElementById("ecran-fin").style.display = "block";
+  document.getElementById("score-final").textContent =
+    "Tu as eu " + score + " / " + questions.length + " bonnes réponses !";
+}
+
+function recommencer(){
+  score = 0;
+  indexQuestion = 0;
+  genererQuestions();
+  document.getElementById("ecran-jeu").style.display = "block";
+  document.getElementById("ecran-fin").style.display = "none";
+  afficherQuestion();
+}
+
+genererQuestions();
+afficherQuestion();
+</script>
+
+</body>
+</html>
