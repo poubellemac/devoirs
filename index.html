@@ -190,8 +190,8 @@
 
       <input type="text" id="reponse-input" placeholder="Écris le verbe ici..." autocomplete="off">
 
-      <div class="qcm-groupe" style="opacity:0.4; pointer-events:none;">
-        <div class="qcm-label">Masculin, féminin, singulier ou pluriel ? (désactivé pour le moment)</div>
+      <div class="qcm-groupe" id="zone-qcm-genre-nombre" style="opacity:0.4; pointer-events:none;">
+        <div class="qcm-label" id="label-qcm-genre-nombre">Masculin, féminin, singulier ou pluriel ? (désactivé pour le moment)</div>
         <div class="qcm-options" id="qcm-genre-nombre">
           <div class="qcm-btn-small" data-type="genre" data-val="m">Masculin</div>
           <div class="qcm-btn-small" data-type="genre" data-val="f">Féminin</div>
@@ -303,7 +303,21 @@ function melanger(tableau){
 function creerQuestionAvecVerbe(verbe){
   const tempsChoisi = temps[Math.floor(Math.random()*temps.length)];
   const sujet = sujets[Math.floor(Math.random()*sujets.length)];
-  return { verbe, tempsChoisi, sujet };
+  return { verbe, tempsChoisi, sujet, retry:false };
+}
+
+function eviterRepetitionsConsecutives(liste){
+  for(let i=1; i<liste.length; i++){
+    if(liste[i].infinitif === liste[i-1].infinitif){
+      for(let j=i+1; j<liste.length; j++){
+        if(liste[j].infinitif !== liste[i-1].infinitif){
+          [liste[i], liste[j]] = [liste[j], liste[i]];
+          break;
+        }
+      }
+    }
+  }
+  return liste;
 }
 
 function genererFile(){
@@ -313,6 +327,7 @@ function genererFile(){
     sac = sac.concat(melanger(verbes));
   }
   sac = melanger(sac).slice(0, NB_QUESTIONS);
+  sac = eviterRepetitionsConsecutives(sac);
   file = sac.map(v => creerQuestionAvecVerbe(v));
 }
 
@@ -359,6 +374,18 @@ function afficherQuestion(){
   genreChoisi = null;
   nombreChoisi = null;
   document.querySelectorAll("#qcm-genre-nombre .qcm-btn-small").forEach(b=>b.classList.remove("selected"));
+
+  const zoneQcm = document.getElementById("zone-qcm-genre-nombre");
+  const labelQcm = document.getElementById("label-qcm-genre-nombre");
+  if(q.retry){
+    zoneQcm.style.opacity = "1";
+    zoneQcm.style.pointerEvents = "auto";
+    labelQcm.textContent = "Masculin, féminin, singulier ou pluriel ?";
+  } else {
+    zoneQcm.style.opacity = "0.4";
+    zoneQcm.style.pointerEvents = "none";
+    labelQcm.textContent = "Masculin, féminin, singulier ou pluriel ? (désactivé pour le moment)";
+  }
 
   const exempleForme = formeAttendue(q.verbe, q.tempsChoisi.cle, sujets[0], "m");
   document.getElementById("zone-indice").innerHTML =
@@ -407,9 +434,20 @@ function valider(){
   const q = file[0];
   const feedback = document.getElementById("zone-feedback");
 
-  // QCM genre/nombre désactivé temporairement (toujours considéré correct)
-  const qcmOk = true;
-  const genreAccord = q.sujet.genre === "amb" ? "m" : q.sujet.genre;
+  let qcmOk = true;
+  let genreAccord = q.sujet.genre === "amb" ? "m" : q.sujet.genre;
+
+  if(q.retry){
+    if(!nombreChoisi || !genreChoisi){
+      feedback.className = "feedback non";
+      feedback.textContent = "⚠️ Choisis d'abord le genre et le nombre.";
+      return;
+    }
+    genreAccord = q.sujet.genre === "amb" ? genreChoisi : q.sujet.genre;
+    const nombreOk = nombreChoisi === q.sujet.nombre;
+    const genreOk = q.sujet.genre === "amb" ? true : (genreChoisi === q.sujet.genre);
+    qcmOk = nombreOk && genreOk;
+  }
 
   const reponse = document.getElementById("reponse-input").value.trim().toLowerCase();
   const attendu = formeAttendue(q.verbe, q.tempsChoisi.cle, q.sujet, genreAccord).toLowerCase();
@@ -441,7 +479,17 @@ function valider(){
 function questionSuivante(){
   const q = file.shift();
   if(!derniereQuestionReussie){
+    q.retry = true;
     file.push(q);
+    // éviter que le verbe qu'on vient de rater revienne juste après lui-même
+    if(file.length > 0 && file[0].verbe.infinitif === q.verbe.infinitif){
+      for(let j=1; j<file.length; j++){
+        if(file[j].verbe.infinitif !== q.verbe.infinitif){
+          [file[0], file[j]] = [file[j], file[0]];
+          break;
+        }
+      }
+    }
   }
   afficherQuestion();
 }
